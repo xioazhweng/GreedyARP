@@ -12,6 +12,15 @@
 #include <thread>
 #include <cstdint>
 #include <cstring>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <arpa/inet.h>
+#include <array>
+
 
 /* Ethernet addresses are 6 bytes */
 #define ETHER_ADDR_LEN	6
@@ -26,6 +35,7 @@ class GreedyARP {
             return iface_.c_str();
         }
 
+
     private:
         std::string iface_;
         pcap_t * handle_;
@@ -33,7 +43,7 @@ class GreedyARP {
         std::queue<std::vector<uint8_t>> packet_queue;
         std::mutex queue_mutex;
         std::condition_variable cv;
-        
+        std::array<uint8_t, 6> mac_;
         
         void sender_thread() {
             while (true) {
@@ -116,10 +126,28 @@ class GreedyARP {
             printf("(%02x:%02x:%02x:%02x:%02x:%02x)",
                 arp->arp_sha[0], arp->arp_sha[1], arp->arp_sha[2],
                 arp->arp_sha[3], arp->arp_sha[4], arp->arp_sha[5]);
-             printf(" -> %s", dst_ip);
+            printf(" -> %s", dst_ip);
             printf("(%02x:%02x:%02x:%02x:%02x:%02x)\n",
             arp->arp_tha[0], arp->arp_tha[1], arp->arp_tha[2],
             arp->arp_tha[3], arp->arp_tha[4], arp->arp_tha[5]);
         }
 
+        void set_mac(void) {
+            struct ifreq ifr;
+            int sock, j, k;
+            char *p, addr[32], mask[32], mac[32];
+            sock=socket(PF_INET, SOCK_STREAM, 0);
+            if (sock == -1) {
+                
+            }
+            strncpy(ifr.ifr_name, iface_.c_str(), sizeof(ifr.ifr_name)-1);
+            ifr.ifr_name[sizeof(ifr.ifr_name)-1]='\0';
+
+            if (ioctl(sock, SIOCGIFHWADDR, &ifr) == -1) {
+                close(sock);
+                throw std::runtime_error("Cannot get MAC address");
+            }
+            memcpy(mac_.data(), ifr.ifr_hwaddr.sa_data, 6);
+            close(sock);
+        }
 };

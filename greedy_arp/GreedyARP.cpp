@@ -1,7 +1,13 @@
 #include "GreedyARP.h"
 
 #include <iostream>
-#include <pcap/pcap.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <arpa/inet.h>
 
 
 GreedyARP::GreedyARP() {
@@ -10,6 +16,7 @@ GreedyARP::GreedyARP() {
         throw std::runtime_error("Interface wasn't found");
     }
     iface_ = dev;
+    set_mac();
 }
 
 GreedyARP::GreedyARP(const std::string & iface) {
@@ -17,8 +24,9 @@ GreedyARP::GreedyARP(const std::string & iface) {
     if (pcap_findalldevs(&alldevs, errbuf) == -1) {
         throw std::runtime_error(errbuf);
     };
-    bool found = false; 
-    for (pcap_if_t * l = alldevs; l != NULL; l = l->next) {
+    bool found = false;
+    pcap_if_t * l; 
+    for (l = alldevs; l != NULL; l = l->next) {
         if (iface == l->name) {
             iface_ = iface;
             found = true;
@@ -29,7 +37,8 @@ GreedyARP::GreedyARP(const std::string & iface) {
     if (!found) {
         throw std::runtime_error("Did't find interface: " + iface);
     }
-}
+    set_mac();
+}   
 
 void GreedyARP::run(void) {
     struct bpf_program fp;
