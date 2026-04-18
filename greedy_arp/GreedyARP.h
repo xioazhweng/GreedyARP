@@ -1,6 +1,5 @@
 #pragma once
 
-//arp and eth.src == c0:35:32:0e:78:35
 #include <string>
 #include <pcap/pcap.h>
 #include <arpa/inet.h>
@@ -23,18 +22,15 @@
 
 
 /* Ethernet addresses are 6 bytes */
-#define ETHER_ADDR_LEN	6
 #define ETHERTYPE_ARP 0x0806
 
 class GreedyARP {
     public:
-        GreedyARP();
-        GreedyARP(const std::string & iface);
+        GreedyARP(const std::string & iface = "None");
         void run(void);
         const char * get_interface() {
             return iface_.c_str();
         }
-
 
     private:
         std::string iface_;
@@ -138,7 +134,7 @@ class GreedyARP {
             char *p, addr[32], mask[32], mac[32];
             sock=socket(PF_INET, SOCK_STREAM, 0);
             if (sock == -1) {
-                
+                throw std::runtime_error("Cannot open socket");
             }
             strncpy(ifr.ifr_name, iface_.c_str(), sizeof(ifr.ifr_name)-1);
             ifr.ifr_name[sizeof(ifr.ifr_name)-1]='\0';

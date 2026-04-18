@@ -9,28 +9,23 @@
 #include <net/if.h>
 #include <arpa/inet.h>
 
-
-GreedyARP::GreedyARP() {
-    char * dev = pcap_lookupdev(errbuf);
-    if (dev == NULL) {
-        throw std::runtime_error("Interface wasn't found");
-    }
-    iface_ = dev;
-    set_mac();
-}
-
 GreedyARP::GreedyARP(const std::string & iface) {
     pcap_if_t * alldevs;
     if (pcap_findalldevs(&alldevs, errbuf) == -1) {
         throw std::runtime_error(errbuf);
     };
     bool found = false;
-    pcap_if_t * l; 
-    for (l = alldevs; l != NULL; l = l->next) {
-        if (iface == l->name) {
-            iface_ = iface;
-            found = true;
-            break;
+    if (iface == "None") {
+        found = true;
+        iface_ = alldevs->name;
+    } else {
+        pcap_if_t * l; 
+        for (l = alldevs; l != NULL; l = l->next) {
+            if (iface == l->name) {
+                iface_ = iface;
+                found = true;
+                break;
+            }
         }
     }
     pcap_freealldevs(alldevs);
