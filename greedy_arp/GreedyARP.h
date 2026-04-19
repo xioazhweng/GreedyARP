@@ -80,9 +80,6 @@ class GreedyARP {
             struct ether_header *eth = (struct ether_header *) packet;
             struct ether_arp *arp = (struct ether_arp *)(packet + sizeof(struct ether_header));
             size_t packet_size = sizeof(ether_header) + sizeof(ether_arp);
-            if (packet_size < 60) {
-                 packet_size = 60; 
-            }
             std::vector<uint8_t> reply(packet_size, 0);
             ether_header* eth_reply = (ether_header*)reply.data();
             ether_arp* arp_reply = (ether_arp*)(reply.data() + sizeof(ether_header));
