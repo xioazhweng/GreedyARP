@@ -9,6 +9,7 @@
 #include <net/if.h>
 #include <arpa/inet.h>
 
+uint8_t GreedyARP::mac_source[6];
 GreedyARP::GreedyARP(const std::string & iface) {
     pcap_if_t * alldevs;
     if (pcap_findalldevs(&alldevs, errbuf) == -1) {
@@ -63,4 +64,5 @@ void GreedyARP::run(void) {
     pcap_freecode(&fp);
     pcap_close(handle_);
 }
+
 

@@ -18,11 +18,10 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <arpa/inet.h>
-#include <array>
-
 
 /* Ethernet addresses are 6 bytes */
 #define ETHERTYPE_ARP 0x0806
+
 
 class GreedyARP {
     public:
@@ -39,7 +38,7 @@ class GreedyARP {
         std::queue<std::vector<uint8_t>> packet_queue;
         std::mutex queue_mutex;
         std::condition_variable cv;
-        std::array<uint8_t, 6> mac_;
+        static uint8_t mac_source[6];
         
         void sender_thread() {
             while (true) {
@@ -83,10 +82,9 @@ class GreedyARP {
             std::vector<uint8_t> reply(packet_size, 0);
             ether_header* eth_reply = (ether_header*)reply.data();
             ether_arp* arp_reply = (ether_arp*)(reply.data() + sizeof(ether_header));
-            uint8_t mac[6] = {0xc0, 0x35, 0x32, 0x0e, 0x78, 0x35};
             // MAC адреса
             memcpy(eth_reply->ether_dhost, eth->ether_shost, 6); // куда отправляем
-            memcpy(eth_reply->ether_shost, mac, 6); // наш MAC
+            memcpy(eth_reply->ether_shost, mac_source, 6); // наш MAC
             eth_reply->ether_type = htons(ETHERTYPE_ARP);
             // ARP заголовок
             arp_reply->ea_hdr.ar_hrd = htons(ARPHRD_ETHER);
@@ -94,7 +92,7 @@ class GreedyARP {
             arp_reply->ea_hdr.ar_hln = 6;
             arp_reply->ea_hdr.ar_pln = 4;
             arp_reply->ea_hdr.ar_op  = htons(ARPOP_REPLY);
-            memcpy(arp_reply->arp_sha, mac, 6);                // наш MAC
+            memcpy(arp_reply->arp_sha, mac_source, 6);                // наш MAC
             memcpy(arp_reply->arp_spa, arp->arp_tpa, 4);       // наш IP (IP, который отвечаем)
             memcpy(arp_reply->arp_tha, arp->arp_sha, 6);       // MAC адрес отправителя запроса
             memcpy(arp_reply->arp_tpa, arp->arp_spa, 4);       // IP отправителя запроса
@@ -128,7 +126,6 @@ class GreedyARP {
         void set_mac(void) {
             struct ifreq ifr;
             int sock, j, k;
-            char *p, addr[32], mask[32], mac[32];
             sock=socket(PF_INET, SOCK_STREAM, 0);
             if (sock == -1) {
                 throw std::runtime_error("Cannot open socket");
@@ -140,7 +137,7 @@ class GreedyARP {
                 close(sock);
                 throw std::runtime_error("Cannot get MAC address");
             }
-            memcpy(mac_.data(), ifr.ifr_hwaddr.sa_data, 6);
+            memcpy(mac_source, ifr.ifr_hwaddr.sa_data, 6);
             close(sock);
         }
 };
