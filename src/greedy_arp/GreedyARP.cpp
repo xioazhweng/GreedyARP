@@ -49,20 +49,37 @@ void GreedyARP::run(void) {
     struct pcap_pkthdr header;
 
     handle_ = pcap_open_live(get_interface(), BUFSIZ, 1, 1000, errbuf);
-    if (handle_ == NULL) {
-        throw std::runtime_error(errbuf);
+    if (handle_ == nullptr) {
+        throw std::runtime_error("pcap_open_live failed: " + std::string(errbuf));
     }
     if (pcap_compile(handle_, &fp, filter_exp, 0, net) == -1) {
-        throw std::runtime_error("Couldn't parde filter");
+        pcap_close(handle_);
+        throw std::runtime_error("pcap_compile failed: " + std::string(pcap_geterr(handle_)));
     }
     if (pcap_setfilter(handle_, &fp) == -1) {
-        throw std::runtime_error("Couldn't install filter");
+        pcap_freecode(&fp);
+        pcap_close(handle_);
+        throw std::runtime_error("pcap_setfilter failed: " + std::string(pcap_geterr(handle_)));
     }
-    std::thread sender(&GreedyARP::sender_thread, this);
-    sender.detach(); 
-    pcap_loop(handle_, 0, packet_handler, reinterpret_cast<u_char*>(this));
     pcap_freecode(&fp);
-    pcap_close(handle_);
+    std::thread sender(&GreedyARP::sender_thread, this);
+    sender.join(); 
+    pcap_loop(handle_, 0, packet_handler, reinterpret_cast<u_char*>(this));
+    
 }
 
 
+void GreedyARP::stop() {
+    running_ = false;
+    cv.notify_all();
+
+    if (sender_thread_.joinable()) {
+        sender_thread_.join();
+    }
+
+    if (handle_) {
+        pcap_breakloop(handle_);
+        pcap_close(handle_);
+        handle_ = nullptr;
+    }
+}

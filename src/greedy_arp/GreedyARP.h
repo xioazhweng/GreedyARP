@@ -18,6 +18,7 @@
 #include <sys/ioctl.h>
 #include <net/if.h>
 #include <arpa/inet.h>
+#include <atomic>
 
 /* Ethernet addresses are 6 bytes */
 #define ETHERTYPE_ARP 0x0806
@@ -26,10 +27,14 @@
 class GreedyARP {
     public:
         GreedyARP(const std::string & iface = "None");
-        void run(void);
+        void run();
+        void stop();
         const char * get_interface() {
             return iface_.c_str();
         }
+        ~GreedyARP() {
+            stop();
+        };
 
     private:
         std::string iface_;
@@ -39,9 +44,11 @@ class GreedyARP {
         std::mutex queue_mutex;
         std::condition_variable cv;
         static uint8_t mac_source[6];
+        std::atomic<bool> running_{true};
+        std::thread sender_thread_;
         
         void sender_thread() {
-            while (true) {
+            while (running_) {
                 std::vector<uint8_t> packet;
                 {
                     std::unique_lock<std::mutex> lock(queue_mutex);
@@ -51,7 +58,7 @@ class GreedyARP {
                 }
                 print_arp(packet.data());
                 if (pcap_sendpacket(handle_, packet.data(), packet.size()) != 0) {
-                    return;
+                    fprintf(stderr, "Error sending packet: %s\n", pcap_geterr(handle_));
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(100));
             }
@@ -122,6 +129,7 @@ class GreedyARP {
             arp->arp_tha[0], arp->arp_tha[1], arp->arp_tha[2],
             arp->arp_tha[3], arp->arp_tha[4], arp->arp_tha[5]);
         }
+
 
         void set_mac(void) {
             struct ifreq ifr;
