@@ -91,7 +91,7 @@ class GreedyARP {
             ether_arp* arp_reply = (ether_arp*)(reply.data() + sizeof(ether_header));
             // MAC адреса
             memcpy(eth_reply->ether_dhost, eth->ether_shost, 6); // куда отправляем
-            memcpy(eth_reply->ether_shost, mac_source, 6); // наш MAC
+            memcpy(eth_reply->ether_shost, mac_source, 6);       // наш MAC
             eth_reply->ether_type = htons(ETHERTYPE_ARP);
             // ARP заголовок
             arp_reply->ea_hdr.ar_hrd = htons(ARPHRD_ETHER);
@@ -99,7 +99,7 @@ class GreedyARP {
             arp_reply->ea_hdr.ar_hln = 6;
             arp_reply->ea_hdr.ar_pln = 4;
             arp_reply->ea_hdr.ar_op  = htons(ARPOP_REPLY);
-            memcpy(arp_reply->arp_sha, mac_source, 6);                // наш MAC
+            memcpy(arp_reply->arp_sha, mac_source, 6);         // наш MAC
             memcpy(arp_reply->arp_spa, arp->arp_tpa, 4);       // наш IP (IP, который отвечаем)
             memcpy(arp_reply->arp_tha, arp->arp_sha, 6);       // MAC адрес отправителя запроса
             memcpy(arp_reply->arp_tpa, arp->arp_spa, 4);       // IP отправителя запроса
